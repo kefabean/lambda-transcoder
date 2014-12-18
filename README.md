@@ -9,11 +9,12 @@ It is recommended that you build the lambda function on an Amazon Linux machine 
 
 The generated zip file can be uploaded via the AWS console. The following parameters are recommended to ensure that you provide maximum resources to the function - these can be trimmed once you are familiar with the time and memory footprint of your typical transcodes.
 
+```
 File name = transcode.js
 Handle name = handler
 Role = arn:aws:iam::<account_id>:role/<role_name>
 Memory (MB) = 1024
 Timeout (s) = 60
-
+```
 
 
