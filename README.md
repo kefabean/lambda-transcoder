@@ -17,12 +17,13 @@ Memory (MB) = 1024
 Timeout (s) = 60
 ```
 
-- two buckets should be created: <bucket-name> and <bucket-name>-transcoded
+- two buckets should be created: \<bucket-name\> and \<bucket-name\>-transcoded
 - an lambda execution IAM role should be created (with policy outlined below)
 - The upload-lambda-function.sh can then be run to upload and configure the designated lambda function, specifying the full arn of or the lambda execution role created in the previous step 
 
 The lambda execution IAM role should have a policy that looks something like this:
 
+```
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -38,4 +39,5 @@ The lambda execution IAM role should have a policy that looks something like thi
     }
   ]
 }
+```
 
