@@ -1,4 +1,3 @@
-mkdir ~/ffmpeg_sources
 
 # install pre-requisites
 sudo yum -y install git
@@ -7,7 +6,16 @@ sudo yum -y install automake
 sudo yum -y install gcc
 sudo yum -y install libtool
 sudo yum -y gcc-c++
-sudo 
+sudo yum -y npm
+
+# install required node modules
+cd transcoder
+npm install async
+npm install fluent-ffmpeg
+cd ..
+
+# download and compile ffmpeg from source including pre-requisites
+mkdir ./ffmpeg_sources
 
 # install yasm
 cd ~/ffmpeg_sources
@@ -96,3 +104,9 @@ make
 make install
 make distclean
 hash -r
+
+# copy compiled binary in to correct place within lambda function
+mkdir ./transcoder/bin
+cp ./ffmpeg_build/bin/ffmpeg ./transcoder/bin/
+cd ./transcoder
+zip -r ../transcoder.zip *
