@@ -5,3 +5,5 @@ This AWS lambda function uses ffmpeg to transcode short AVI videos to MP4 in res
 
 In order for the function to work correctly there are a number of prerequisites required. These include the async and fluent-ffmpeg nodejs modules as well the ffmpeg binary compiled from source to include all dependencies. This is then packaged up as a zip file so that it can be uploaded to the AWS Lambda service. The make-lambda-function.sh script is included to facilitate the creation of the transcoder.zip file ready for upload.
 
+It is recommended that you build the lambda function on an Amazon Linux machine to ensure that it is fully compatible.
+
