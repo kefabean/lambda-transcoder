@@ -7,7 +7,7 @@ In order for the function to work correctly there are a number of prerequisites 
 
 It is recommended that you build the lambda function on an Amazon Linux machine to ensure that it is fully compatible.
 
-The generated zip file can be uploaded via the AWS console. The following parameters are recommended to ensure that you provide maximum resources to the function - these can be trimmed once you are familiar with the time and memory footprint of your typical transcodes.
+The generated zip file can be uploaded via the AWS console. The following parameters are recommended to ensure that you provide maximum resources to the function - these can be trimmed once you are familiar with the time and memory footprint of your typical transcodes. T
 
 ```
 File name = transcode.js
@@ -17,4 +17,25 @@ Memory (MB) = 1024
 Timeout (s) = 60
 ```
 
+- two buckets should be created: <bucket-name> and <bucket-name>-transcoded
+- an lambda execution IAM role should be created (with policy outlined below)
+- The upload-lambda-function.sh can then be run to upload and configure the designated lambda function, specifying the full arn of or the lambda execution role created in the previous step 
+
+The lambda execution IAM role should have a policy that looks something like this:
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::<bucket-name>/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::<bucket-name>-transcoded/*"
+    }
+  ]
+}
 
