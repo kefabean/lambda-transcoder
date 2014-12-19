@@ -1,30 +1,31 @@
-process.env['PATH'] = process.env['PATH'] + ':' + process.env['LAMBDA_TASK_ROOT'];
-console.log('Loading event');
 var aws = require('aws-sdk');
 var s3 = new aws.S3({apiVersion: '2006-03-01' });
+var sns = new aws.SNS();
 var ffmpeg = require('fluent-ffmpeg');
 var util = require('util');
 var async = require('async');
 var fs = require('fs');
+// use external s3Stream module to stream to s3 and keep memory footprint low
+var s3Stream = require('s3-upload-stream')(new aws.S3());
+
+// process.env['PATH'] = process.env['PATH'] + ':' + process.env['LAMBDA_TASK_ROOT'];
 
 exports.handler = function(event, context) {
-	// Write event to console log
+	// write event to console log
 	console.log(JSON.stringify(event, null, '  '));
 
-	// Get the object from the event and show its content type
+	// get s3 object info from event
 	var srcBucket   = event.Records[0].s3.bucket.name;
 	var srcKey      = event.Records[0].s3.object.key;
-	var srcFileName = '/tmp/' + srcKey;
 	var dstBucket   = srcBucket + "-transcoded";
 	var dstKey      = srcKey + ".mp4";
-	var dstFileName = '/tmp/' + dstKey;
 
-	// Validate that source and destination are different buckets
+	// validate source and destination buckets are different
 	if (srcBucket == dstBucket) {
 	  console.error("Destination bucket must not match source bucket.");
 	  return;
 	}
-	// Infer the input format type
+	// infer input format
 	var typeMatch = srcKey.match(/\.([^.]*)$/);
 	if (!typeMatch) {
 		console.error('unable to infer image type for key ' + srcKey);
@@ -33,48 +34,57 @@ exports.handler = function(event, context) {
 	}
 	var imageType = typeMatch[1];
 	if (imageType != "avi") {
-		console.log('skipping non-image ' + srcKey);
+		console.log('skipping non-avi file ' + srcKey);
 		context.done(null,'');
 		return;
 	}
 
 	async.waterfall( [
-		function download(next) {
-			// download the file from s3
-			console.log("Downloading ", srcKey, " from S3");
-			s3.getObject({ Bucket: srcBucket, Key: srcKey }, next);
-		},
-		function writetodisk(response, next) {
-			// write the file to disk
-			console.log("Writing file downloade from S3 to ", srcFileName);
-			var tmpfile = fs.writeFile(srcFileName, response.Body, next);
-		},
 		function tranform(next) {
+		 	// set source s3 object
+		 	console.log("Getting object from S3: ", srcKey);
+			sourceStream = s3.getObject({ Bucket: srcBucket, Key: srcKey }).createReadStream()
+
+			// set target s3 object
+			var targetStream = s3Stream.upload({
+  				Bucket: dstBucket,
+  				Key: dstKey,
+  				StorageClass: "REDUCED_REDUNDANCY"
+			});
+
 		 	// transcode file
-		 	console.log("Transcoding from ", srcFileName, " to ", dstFileName);
-		 	var proc = new ffmpeg({ source: srcFileName, nolog: true });
-		 	// set the path to FFmpeg binary
+		 	console.log("Transcoding object");
+		 	var proc = new ffmpeg(sourceStream);
+
+		 	// set path to FFmpeg binary
 		 	proc.setFfmpegPath(process.env['LAMBDA_TASK_ROOT'] + "/bin/ffmpeg");
-			// set the size, format and filename
+
+			// set size, format, target stream, options that allow mp4 streaming and event handlers
 		 	proc
 		 	.withSize('100%')
 		 	.toFormat('mp4')
-		 	.output(dstFileName)
-		 	// set event handlers
-		 	.on('end', function() {
-		 		next();
-		 	})
+			.outputOptions('-movflags frag_keyframe+empty_moov')
+		 	.output(targetStream)
+		 	.on('end', next);
+
+			// start transcode
 		 	.run();
 		},
-		function readfromdisk(next) {
-			// read the file from disk
-			console.log("Reading transcoded file ", dstFileName);
-			var readFromDisk = fs.readFile(dstFileName, next);
+		function deleteOriginal(next) {
+			// delete original object once transcoding complete
+			s3.deleteObject({ Bucket: srcBucket, Key: srcKey }, next);
 		},
-		function upload(response, next) {
-			// upload the file to s3
-			console.log("Uploading ", dstFileName, " to S3");
-         		s3.putObject( { Bucket: dstBucket, Key: dstKey, Body: response }, next);
+		function getSignedUrl(next) {
+			// get url to transcoded object
+			s3.getSignedUrl({Bucket: dstBucket, Key: dstKey}, next);
+		},
+		function notifyUsers(imageUrl, next) {
+			var messageParams = {
+				Message: 'Image available for download here: ' + imageUrl,
+				Subject: 'Motion detected from kefa-camera',
+				TopicArn: 'arn:aws:sns:eu-west-1:089261358639:kefa-camera'
+			};
+			sns.publish(params, next);
 		}
 		], function (err) {
 			if (err) {

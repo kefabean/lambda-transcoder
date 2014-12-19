@@ -16,6 +16,7 @@ sudo yum -y install yasm
 cd $CURR_DIR/transcoder
 npm install async
 npm install fluent-ffmpeg
+npm install s3-upload-stream
 
 # download and compile ffmpeg from source including pre-requisites
 mkdir $CURR_DIR/ffmpeg_sources
