@@ -1,3 +1,4 @@
+process.env['PATH'] = process.env['PATH'] + ':' + process.env['LAMBDA_TASK_ROOT'];
 var aws = require('aws-sdk');
 var s3 = new aws.S3({apiVersion: '2006-03-01' });
 var sns = new aws.SNS();
@@ -8,7 +9,6 @@ var fs = require('fs');
 // use external s3Stream module to stream to s3 and keep memory footprint low
 var s3Stream = require('s3-upload-stream')(new aws.S3());
 
-// process.env['PATH'] = process.env['PATH'] + ':' + process.env['LAMBDA_TASK_ROOT'];
 
 exports.handler = function(event, context) {
 	// write event to console log
@@ -40,10 +40,10 @@ exports.handler = function(event, context) {
 	}
 
 	async.waterfall( [
-		function tranform(next) {
+		function transform(next) {
 		 	// set source s3 object
 		 	console.log("Getting object from S3: ", srcKey);
-			sourceStream = s3.getObject({ Bucket: srcBucket, Key: srcKey }).createReadStream()
+			var sourceStream = s3.getObject({ Bucket: srcBucket, Key: srcKey }).createReadStream();
 
 			// set target s3 object
 			var targetStream = s3Stream.upload({
@@ -65,27 +65,30 @@ exports.handler = function(event, context) {
 		 	.toFormat('mp4')
 			.outputOptions('-movflags frag_keyframe+empty_moov')
 		 	.output(targetStream)
-		 	.on('end', next);
-
+			.on('end', function() {
+				next();
+			})
 			// start transcode
 		 	.run();
-		},
-		function deleteOriginal(next) {
-			// delete original object once transcoding complete
-			s3.deleteObject({ Bucket: srcBucket, Key: srcKey }, next);
-		},
-		function getSignedUrl(next) {
-			// get url to transcoded object
-			s3.getSignedUrl({Bucket: dstBucket, Key: dstKey}, next);
-		},
-		function notifyUsers(imageUrl, next) {
-			var messageParams = {
-				Message: 'Image available for download here: ' + imageUrl,
-				Subject: 'Motion detected from kefa-camera',
-				TopicArn: 'arn:aws:sns:eu-west-1:089261358639:kefa-camera'
-			};
-			sns.publish(params, next);
 		}
+		//,
+		//function deleteOriginal(next) {
+			// delete original object once transcoding complete
+		//	s3.deleteObject({ Bucket: srcBucket, Key: srcKey }, next);
+		//}
+		//,
+		// function getSignedUrl(next) {
+		//	// get url to transcoded object
+		//	s3.getSignedUrl({Bucket: dstBucket, Key: dstKey}, next);
+		//},
+		//function notifyUsers(next) {
+		//	var messageParams = {
+		//		Message: 'Video available for download here: ',// + imageUrl,
+		//		Subject: 'Motion detected from kefa-camera',
+		//		TopicArn: 'arn:aws:sns:eu-west-1:089261358639:kefa-camera'
+		//	};
+		//	sns.publish(messageParams, next);
+		//}
 		], function (err) {
 			if (err) {
 				console.error(
