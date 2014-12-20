@@ -59,3 +59,26 @@ The lambda invocation IAM role should have a policy that looks something like:
   ]
 }
 ```
+
+the following trust relationship: 
+
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "s3.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole",
+      "Condition": {
+        "StringLike": {
+          "sts:ExternalId": "arn:aws:s3:::*"
+        }
+      }
+    }
+  ]
+}
+```
