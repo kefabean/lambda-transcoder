@@ -18,7 +18,8 @@ Timeout (s) = 60
 ```
 
 - two buckets should be created: \<bucket-name\> and \<bucket-name\>-transcoded
-- an lambda execution IAM role should be created (with policy outlined below)
+- a lambda execution IAM role should be created (with policy outlined below)
+- a lambda invocation IAM role should be created 
 - run upload-lambda-function.sh, specifying the ARN lambda execution role created above as an input parameter
 
 The lambda execution IAM role should have a policy that looks something like this:
@@ -40,4 +41,21 @@ The lambda execution IAM role should have a policy that looks something like thi
   ]
 }
 ```
+The lambda invocation IAM role should have a policy that looks something like:
 
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "lambda:InvokeFunction"
+      ],
+      "Resource": [
+        "arn:aws:lambda:<region>:<account-id>:function:<lambda-function-name"
+      ]
+    }
+  ]
+}
+```
