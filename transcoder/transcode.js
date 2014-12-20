@@ -70,26 +70,24 @@ exports.handler = function(event, context) {
 			})
 			// start transcode
 		 	.run();
-		}
-		//,
-		//function deleteOriginal(next) {
+		},
+		function deleteOriginal(next) {
 			// delete original object once transcoding complete
-		//	s3.deleteObject({ Bucket: srcBucket, Key: srcKey }, next);
-		//}
-		//,
+			s3.deleteObject({ Bucket: srcBucket, Key: srcKey }, next);
+		},
 		// function getSignedUrl(next) {
 		//	// get url to transcoded object
-		//	s3.getSignedUrl({Bucket: dstBucket, Key: dstKey}, next);
+		//	s3.getSignedUrl('getObject', {Bucket: dstBucket, Key: dstKey}, next);
 		//},
-		//function notifyUsers(next) {
-		//	var messageParams = {
-		//		Message: 'Video available for download here: ',// + imageUrl,
-		//		Subject: 'Motion detected from kefa-camera',
-		//		TopicArn: 'arn:aws:sns:eu-west-1:089261358639:kefa-camera'
-		//	};
-		//	sns.publish(messageParams, next);
-		//}
-		], function (err) {
+		function notifyUsers(next) {
+			var messageParams = {
+				Message: 'Video available for download here: ',// + imageUrl,
+				Subject: 'Motion detected from kefa-camera',
+				TopicArn: 'arn:aws:sns:eu-west-1:089261358639:kefa-camera'
+			};
+			sns.publish(messageParams, next);
+		}
+		], function (err, data) {
 			if (err) {
 				console.error(
 					'Unable to resize ' + srcBucket + '/' + srcKey +
