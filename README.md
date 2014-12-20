@@ -53,7 +53,7 @@ The lambda invocation IAM role should have a policy that looks something like:
         "lambda:InvokeFunction"
       ],
       "Resource": [
-        "arn:aws:lambda:<region>:<account-id>:function:<lambda-function-name"
+        "arn:aws:lambda:<region>:<account-id>:function:<lambda-function-name>"
       ]
     }
   ]
