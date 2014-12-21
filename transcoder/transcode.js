@@ -3,9 +3,7 @@ var aws = require('aws-sdk');
 var s3 = new aws.S3({apiVersion: '2006-03-01' });
 var sns = new aws.SNS();
 var ffmpeg = require('fluent-ffmpeg');
-var util = require('util');
 var async = require('async');
-var fs = require('fs');
 // use external s3Stream module to stream to s3 and keep memory footprint low
 var s3Stream = require('s3-upload-stream')(new aws.S3());
 
@@ -51,6 +49,9 @@ exports.handler = function(event, context) {
   				Key: dstKey,
   				StorageClass: "REDUCED_REDUNDANCY"
 			});
+			targetStream.on('uploaded', function() {
+				next();
+			});
 
 		 	// transcode file
 		 	console.log("Transcoding object");
@@ -65,23 +66,22 @@ exports.handler = function(event, context) {
 		 	.toFormat('mp4')
 			.outputOptions('-movflags frag_keyframe+empty_moov')
 		 	.output(targetStream)
-			.on('end', function() {
-				next();
-			})
 			// start transcode
 		 	.run();
 		},
 		function deleteOriginal(next) {
 			// delete original object once transcoding complete
-			s3.deleteObject({ Bucket: srcBucket, Key: srcKey }, next);
+			s3.deleteObject({ Bucket: srcBucket, Key: srcKey }, next());
 		},
-		// function getSignedUrl(next) {
-		//	// get url to transcoded object
-		//	s3.getSignedUrl('getObject', {Bucket: dstBucket, Key: dstKey}, next);
-		//},
-		function notifyUsers(next) {
+		function getVideoUrl(next) {
+			// get url to transcoded object
+			s3.getSignedUrl('getObject', {Bucket: dstBucket, Key: dstKey, Expires: 600}, function(err, url) {
+				next(null, url);
+			});
+		},
+		function notifyUsers(url, next) {
 			var messageParams = {
-				Message: 'Video available for download here: ',// + imageUrl,
+				Message: 'Video available for download here: ' + url,
 				Subject: 'Motion detected from kefa-camera',
 				TopicArn: 'arn:aws:sns:eu-west-1:089261358639:kefa-camera'
 			};
